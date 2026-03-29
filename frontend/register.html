@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inscription — FreelanceHub</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<nav id="navbar"></nav>
+
+<main>
+  <div style="min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;padding:40px 20px">
+    <div style="width:100%;max-width:460px;animation:fadeUp .35s ease">
+
+      <!-- STEP 1 : Form -->
+      <div id="step1">
+        <h1 style="font-size:30px;margin-bottom:6px">Créer un compte</h1>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:28px">
+          Déjà inscrit ? <a href="login.html" style="color:var(--primary);font-weight:600">Se connecter</a>
+        </p>
+
+        <!-- Role selector -->
+        <div class="role-grid">
+          <div class="role-card selected" data-role="client" onclick="selectRole('client',this)">
+            <div class="role-card-icon">🛒</div>
+            <div class="role-card-label">Client</div>
+            <div class="role-card-desc">Je cherche des services</div>
+          </div>
+          <div class="role-card" data-role="freelancer" onclick="selectRole('freelancer',this)">
+            <div class="role-card-icon">💼</div>
+            <div class="role-card-label">Freelancer</div>
+            <div class="role-card-desc">Je propose mes services</div>
+          </div>
+        </div>
+        <input type="hidden" id="roleInput" value="client" />
+
+        <div id="alertBox1"></div>
+
+        <div class="form-group">
+          <label class="form-label">Nom complet</label>
+          <input class="input" id="nom" type="text" placeholder="Yassine El Amrani" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Adresse email</label>
+          <input class="input" id="email" type="email" placeholder="vous@exemple.com" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mot de passe</label>
+          <div class="input-group">
+            <input class="input" id="password" type="password" placeholder="Minimum 6 caractères" oninput="updateStrength(this.value)" />
+            <button class="input-eye" type="button" id="eyeBtn">👁️</button>
+          </div>
+          <!-- Strength indicator -->
+          <div class="strength-bar" id="strengthBar" style="display:none">
+            <div class="strength-segment" id="seg1"></div>
+            <div class="strength-segment" id="seg2"></div>
+            <div class="strength-segment" id="seg3"></div>
+            <span class="strength-label" id="strengthLabel"></span>
+          </div>
+        </div>
+
+        <!-- Verification method -->
+        <div class="form-group">
+          <label class="form-label">Vérification du compte</label>
+          <div style="padding:12px;background:rgba(232,93,4,.1);border-radius:6px;color:var(--primary);font-size:13px">
+            📧 Vérification par email (un code sera envoyé à votre adresse)
+          </div>
+          <input type="hidden" id="methodInput" value="email" />
+        </div>
+
+        <button class="btn btn-primary btn-full btn-lg" id="registerBtn" onclick="doRegister()">
+          Créer mon compte →
+        </button>
+
+        <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:16px">
+          En vous inscrivant, vous acceptez nos conditions d'utilisation.
+        </p>
+      </div>
+
+      <!-- STEP 2 : Verify code -->
+      <div id="step2" style="display:none;text-align:center;animation:fadeUp .35s ease">
+        <div id="verifyIcon" style="font-size:64px;margin-bottom:16px">📧</div>
+        <h1 style="font-size:28px;margin-bottom:8px">Vérification</h1>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:8px">
+          Code envoyé à <strong id="verifyTarget" style="color:var(--dark)"></strong>
+        </p>
+
+        <!-- Dev code hint -->
+        <div id="devCodeBox" style="display:none;background:#fef9c3;border:1px solid #fde047;border-radius:var(--radius);padding:12px;margin-bottom:16px;font-size:13px;color:#854d0e">
+          🔧 Mode dev — Code : <strong id="devCodeVal" style="font-family:monospace;font-size:18px;letter-spacing:4px"></strong>
+        </div>
+
+        <div id="alertBox2" style="text-align:left"></div>
+
+        <div class="form-group">
+          <input class="input verify-code-input" id="codeInput" type="text" inputmode="numeric" maxlength="6" placeholder="_ _ _ _ _ _" />
+        </div>
+
+        <button class="btn btn-primary btn-full btn-lg" id="verifyBtn" onclick="doVerify()">
+          Vérifier mon compte →
+        </button>
+
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;align-items:center">
+          <button onclick="doResend()" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:14px;font-family:inherit">
+            Renvoyer le code
+          </button>
+          <button onclick="showStep(1)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;font-family:inherit">
+            ← Modifier mes informations
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  renderNavbar();
+
+  // Pre-fill role from URL
+  const urlRole = new URLSearchParams(location.search).get('role');
+  if (urlRole === 'freelancer') selectRole('freelancer', document.querySelector('[data-role=freelancer]'));
+
+  let savedUserId = null;
+
+  // ── Role selection ────────────────────────────
+  function selectRole(role, el) {
+    document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('roleInput').value = role;
+  }
+
+  // ── Eye toggle ────────────────────────────────
+  document.getElementById('eyeBtn').addEventListener('click', () => {
+    const inp = document.getElementById('password');
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    document.getElementById('eyeBtn').textContent = show ? '🙈' : '👁️';
+  });
+
+  // ── Password strength ─────────────────────────
+  function updateStrength(val) {
+    const bar = document.getElementById('strengthBar');
+    if (!val) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    const len = val.length;
+    const colors = ['#ef4444','#f59e0b','#22c55e'];
+    const labels = ['Faible','Moyen','Fort'];
+    const level  = len < 6 ? 0 : len < 10 ? 1 : 2;
+    ['seg1','seg2','seg3'].forEach((id,i) => {
+      document.getElementById(id).style.background = i <= level ? colors[level] : '#e8e7e1';
+    });
+    document.getElementById('strengthLabel').textContent = labels[level];
+  }
+
+  // ── Steps ─────────────────────────────────────
+  function showStep(n) {
+    document.getElementById('step1').style.display = n === 1 ? 'block' : 'none';
+    document.getElementById('step2').style.display = n === 2 ? 'block' : 'none';
+  }
+
+  // ── Register ──────────────────────────────────
+  async function doRegister() {
+    const nom    = document.getElementById('nom').value.trim();
+    const email  = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const role   = document.getElementById('roleInput').value;
+    const alertBox = document.getElementById('alertBox1');
+    alertBox.innerHTML = '';
+
+    if (!nom || !email || !password) return showAlert(alertBox, 'Tous les champs sont requis.');
+    if (password.length < 6) return showAlert(alertBox, 'Mot de passe trop court (min 6 caractères).');
+
+    const btn = document.getElementById('registerBtn');
+    setLoading(btn, true);
+    try {
+      const data = await api.post('/auth/register', { nom, email, password, role, verifyMethod: 'email' });
+      savedUserId = data.userId;
+
+      // Show step 2
+      document.getElementById('verifyIcon').textContent = '📧';
+      document.getElementById('verifyTarget').textContent = email;
+
+      if (data.devCode) {
+        document.getElementById('devCodeBox').style.display = 'block';
+        document.getElementById('devCodeVal').textContent = data.devCode;
+      }
+      showStep(2);
+    } catch(err) {
+      showAlert(alertBox, err.message || 'Erreur lors de l\'inscription.');
+      setLoading(btn, false, 'Créer mon compte →');
+    }
+  }
+
+  // ── Verify ────────────────────────────────────
+  async function doVerify() {
+    const code = document.getElementById('codeInput').value.trim();
+    const alertBox = document.getElementById('alertBox2');
+    alertBox.innerHTML = '';
+    if (code.length !== 6) return showAlert(alertBox, 'Le code doit contenir 6 chiffres.');
+
+    const btn = document.getElementById('verifyBtn');
+    setLoading(btn, true);
+    try {
+      const data = await api.post('/auth/verify', { userId: savedUserId, code });
+      Auth.setSession(data.token, data.user);
+      location.href = data.user.role === 'freelancer' ? 'create-service.html' : 'services.html';
+    } catch(err) {
+      showAlert(alertBox, err.message || 'Code invalide.');
+      setLoading(btn, false, 'Vérifier mon compte →');
+    }
+  }
+
+  // ── Resend ────────────────────────────────────
+  async function doResend() {
+    try {
+      await api.post('/auth/resend-code', { userId: savedUserId });
+      showAlert(document.getElementById('alertBox2'), 'Nouveau code envoyé !', 'success');
+    } catch(err) {
+      showAlert(document.getElementById('alertBox2'), 'Erreur lors du renvoi.');
+    }
+  }
+</script>
+</body>
+</html>

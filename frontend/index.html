@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FreelanceHub — Trouvez votre freelancer idéal</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav id="navbar"></nav>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-content">
+      <span class="badge badge-primary" style="margin-bottom:20px;display:inline-flex">🇲🇦 &nbsp;La plateforme freelance marocaine #1</span>
+      <h1>Trouvez le talent<br>qu'il vous <span>faut.</span></h1>
+      <p>Des milliers de freelancers qualifiés prêts à transformer vos idées en réalité.</p>
+      <div class="hero-search">
+        <input class="input" id="heroSearch" placeholder="Développeur web, logo, traduction..." />
+        <button class="btn btn-primary btn-lg" onclick="doSearch()">Rechercher</button>
+      </div>
+      <p class="hero-tags">Populaire :
+        <a href="services.html?q=Logo">Logo</a>
+        <a href="services.html?q=Site+web">Site web</a>
+        <a href="services.html?q=Marketing">Marketing</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section style="background:#fff;border-bottom:1px solid var(--border)">
+    <div class="container">
+      <div class="grid-3" style="padding:28px 0;text-align:center">
+        <div><div style="font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:var(--primary)">500+</div><div style="color:var(--muted);font-size:14px;margin-top:4px">Freelancers actifs</div></div>
+        <div><div style="font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:var(--primary)">1200+</div><div style="color:var(--muted);font-size:14px;margin-top:4px">Projets livrés</div></div>
+        <div><div style="font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:var(--primary)">98%</div><div style="color:var(--muted);font-size:14px;margin-top:4px">Clients satisfaits</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORIES -->
+  <section class="page">
+    <div class="container">
+      <h2 class="section-title">Explorez par catégorie</h2>
+      <p class="section-sub" style="margin-bottom:28px">Choisissez parmi nos domaines d'expertise</p>
+      <div class="cat-grid">
+        <div class="cat-card" onclick="location.href='services.html?cat=Design'"><div class="cat-icon">🎨</div><div class="cat-label">Design</div></div>
+        <div class="cat-card" onclick="location.href='services.html?cat=Développement'"><div class="cat-icon">💻</div><div class="cat-label">Développement</div></div>
+        <div class="cat-card" onclick="location.href='services.html?cat=Marketing'"><div class="cat-icon">📈</div><div class="cat-label">Marketing</div></div>
+        <div class="cat-card" onclick="location.href='services.html?cat=Rédaction'"><div class="cat-icon">✍️</div><div class="cat-label">Rédaction</div></div>
+        <div class="cat-card" onclick="location.href='services.html?cat=Vidéo'"><div class="cat-icon">🎬</div><div class="cat-label">Vidéo</div></div>
+        <div class="cat-card" onclick="location.href='services.html?cat=Traduction'"><div class="cat-icon">🌍</div><div class="cat-label">Traduction</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED SERVICES -->
+  <section style="padding-bottom:60px">
+    <div class="container">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+        <div>
+          <h2 class="section-title">Services populaires</h2>
+          <p class="section-sub">Les plus demandés cette semaine</p>
+        </div>
+        <a href="services.html" class="btn btn-outline">Voir tout →</a>
+      </div>
+      <div class="grid-3" id="featuredServices">
+        <!-- skeleton -->
+        ${Array(6).fill(`
+          <div class="card">
+            <div class="skeleton" style="height:180px"></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+              <div class="skeleton" style="height:12px;width:60px;border-radius:100px"></div>
+              <div class="skeleton" style="height:16px;width:80%"></div>
+              <div class="skeleton" style="height:16px;width:50%"></div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section style="background:rgba(232,93,4,.05);border-top:1px solid rgba(232,93,4,.1);border-bottom:1px solid rgba(232,93,4,.1);padding:64px 20px;text-align:center">
+    <h2 class="section-title" style="font-size:32px;margin-bottom:14px">Vous êtes freelancer ?</h2>
+    <p style="color:var(--muted);max-width:480px;margin:0 auto 28px;line-height:1.7">Rejoignez des centaines de freelancers qui gagnent leur vie grâce à FreelanceHub.</p>
+    <a href="register.html?role=freelancer" class="btn btn-primary btn-lg">Commencer gratuitement →</a>
+  </section>
+</main>
+
+<footer id="footer"></footer>
+
+<script src="js/api.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  renderNavbar('home');
+  renderFooter();
+
+  function doSearch() {
+    const q = document.getElementById('heroSearch').value.trim();
+    if (q) location.href = `services.html?q=${encodeURIComponent(q)}`;
+  }
+  document.getElementById('heroSearch').addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+
+  // Load featured services
+  (async () => {
+    try {
+      const services = await api.get('/services?limit=6');
+      const el = document.getElementById('featuredServices');
+      if (!services.length) {
+        el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted)">
+          <div style="font-size:48px;margin-bottom:12px">🌱</div>
+          <p>Aucun service encore.</p>
+          <a href="register.html" class="btn btn-primary" style="margin-top:12px;display:inline-flex">Commencer</a>
+        </div>`;
+        return;
+      }
+      el.innerHTML = services.map(s => serviceCardHTML(s)).join('');
+    } catch(e) {
+      document.getElementById('featuredServices').innerHTML = '';
+    }
+  })();
+
+  function serviceCardHTML(s) {
+    const img = s.image
+      ? `<img src="http://localhost:5000${s.image}" alt="${s.titre}" />`
+      : '🎨';
+    return `
+      <div class="card service-card" onclick="location.href='service-detail.html?id=${s.id}'">
+        <div class="service-card-img">${img}</div>
+        <div class="service-card-body">
+          ${s.categorie ? `<span class="badge badge-primary">${s.categorie}</span>` : ''}
+          <div class="service-card-title">${s.titre}</div>
+          <div class="service-card-seller">
+            ${avatarHTML(s.freelancer_nom, 26)}
+            <span style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.freelancer_nom}</span>
+          </div>
+          <div class="service-card-footer">
+            <div>${starsHTML(s.note_moyenne)} <span style="font-size:12px;color:var(--muted)">(${s.nb_avis||0})</span></div>
+            <div class="price">${s.prix} DH</div>
+          </div>
+        </div>
+      </div>`;
+  }
+</script>
+</body>
+</html>

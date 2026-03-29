@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — FreelanceHub</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<nav id="navbar"></nav>
+<main class="page">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+      <div>
+        <h1 class="section-title">Dashboard</h1>
+        <p class="section-sub" id="welcomeMsg">Chargement...</p>
+      </div>
+      <div id="newServiceBtn"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-4" id="statsGrid" style="margin-bottom:36px"></div>
+
+    <!-- My services (freelancer) -->
+    <div id="myServicesSection" style="display:none;margin-bottom:36px">
+      <h2 style="font-size:20px;font-family:Syne,sans-serif;font-weight:700;margin-bottom:16px">Mes services</h2>
+      <div id="myServicesList"></div>
+    </div>
+
+    <!-- Orders -->
+    <div>
+      <h2 style="font-size:20px;font-family:Syne,sans-serif;font-weight:700;margin-bottom:16px" id="ordersTitle">Commandes</h2>
+      <div id="ordersList"></div>
+    </div>
+  </div>
+</main>
+<footer id="footer"></footer>
+
+<script src="js/api.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw '';
+  renderNavbar('dashboard');
+  renderFooter();
+
+  const user = Auth.getUser();
+
+  document.getElementById('welcomeMsg').textContent = `Bonjour, ${user.nom} 👋`;
+  document.getElementById('ordersTitle').textContent =
+    user.role === 'client' ? 'Mes commandes' : 'Commandes reçues';
+
+  if (user.role === 'freelancer') {
+    document.getElementById('newServiceBtn').innerHTML =
+      `<a href="create-service.html" class="btn btn-primary">+ Nouveau service</a>`;
+  }
+
+  (async () => {
+    const reqs = [api.get('/orders')];
+    if (user.role === 'freelancer') reqs.push(api.get('/services/mine'));
+
+    const [orders, myServices] = await Promise.all(reqs);
+
+    // Stats
+    const done    = orders.filter(o => o.statut === 'termine');
+    const ongoing = orders.filter(o => o.statut === 'en_cours');
+    const revenue = done.reduce((s,o) => s + Number(o.montant), 0);
+
+    document.getElementById('statsGrid').innerHTML = [
+      { n: orders.length, label:'Total commandes', icon:'📦' },
+      { n: ongoing.length, label:'En cours', icon:'⚙️' },
+      { n: done.length, label:'Terminées', icon:'✅' },
+      { n: revenue.toFixed(0)+' DH', label: user.role==='freelancer'?'Revenus':'Dépenses', icon:'💰' },
+    ].map(s => `
+      <div class="stat-card">
+        <div class="stat-icon">${s.icon}</div>
+        <div class="stat-value">${s.n}</div>
+        <div class="stat-label">${s.label}</div>
+      </div>`).join('');
+
+    // My services
+    if (user.role === 'freelancer' && myServices) {
+      document.getElementById('myServicesSection').style.display = 'block';
+      if (!myServices.length) {
+        document.getElementById('myServicesList').innerHTML = `
+          <div class="card" style="padding:32px;text-align:center;color:var(--muted)">
+            <div style="font-size:40px;margin-bottom:10px">📭</div>
+            <p style="margin-bottom:14px">Pas encore de service.</p>
+            <a href="create-service.html" class="btn btn-primary">Créer mon premier service</a>
+          </div>`;
+      } else {
+        document.getElementById('myServicesList').innerHTML = myServices.map(s => `
+          <div class="order-row" style="margin-bottom:10px">
+            <div style="width:52px;height:52px;border-radius:10px;background:rgba(232,93,4,.1);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">
+              ${s.image ? `<img src="http://localhost:5000${s.image}" style="width:100%;height:100%;object-fit:cover;border-radius:10px">` : '🎨'}
+            </div>
+            <div class="order-info">
+              <div class="order-title"><a href="service-detail.html?id=${s.id}" style="color:inherit">${s.titre}</a></div>
+              <div class="order-meta">${s.prix} DH · ${s.categorie||'-'}</div>
+            </div>
+            <button onclick="deleteService(${s.id},this)" class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)">🗑️</button>
+          </div>`).join('');
+      }
+    }
+
+    // Orders
+    if (!orders.length) {
+      document.getElementById('ordersList').innerHTML = `
+        <div class="card" style="padding:40px;text-align:center;color:var(--muted)">
+          <div style="font-size:40px;margin-bottom:10px">📭</div>
+          <p>Aucune commande pour l'instant.</p>
+          ${user.role==='client'?`<a href="services.html" class="btn btn-primary" style="margin-top:14px;display:inline-flex">Explorer les services</a>`:''}
+        </div>`;
+    } else {
+      document.getElementById('ordersList').innerHTML = orders.map(o => {
+        const st = STATUS[o.statut] || STATUS.en_attente;
+        const otherName = user.role==='client' ? o.freelancer_nom : o.client_nom;
+        const actionBtn = user.role==='freelancer' && o.statut==='en_attente'
+          ? `<button class="btn btn-primary btn-sm" onclick="updateStatus(${o.id},'en_cours',this)">Accepter</button>`
+          : user.role==='freelancer' && o.statut==='en_cours'
+          ? `<button class="btn btn-primary btn-sm" onclick="updateStatus(${o.id},'termine',this)">Terminer</button>`
+          : '';
+        return `
+          <div class="order-row" style="margin-bottom:10px" id="order-${o.id}">
+            <div class="order-info">
+              <div class="order-title">${o.titre}</div>
+              <div class="order-meta">${user.role==='client'?'Freelancer':'Client'}: ${otherName} · ${formatDate(o.created_at)}</div>
+            </div>
+            <div class="order-actions">
+              <span style="font-family:Syne,sans-serif;font-weight:700;color:var(--primary)">${Number(o.montant).toFixed(0)} DH</span>
+              <span class="badge ${st.cls}">${st.label}</span>
+              ${actionBtn}
+            </div>
+          </div>`;
+      }).join('');
+    }
+  })();
+
+  async function updateStatus(orderId, statut, btn) {
+    setLoading(btn, true);
+    await api.put(`/orders/${orderId}/status`, { statut });
+    location.reload();
+  }
+
+  async function deleteService(id, btn) {
+    if (!confirm('Supprimer ce service ?')) return;
+    setLoading(btn, true);
+    await api.delete(`/services/${id}`);
+    location.reload();
+  }
+</script>
+</body>
+</html>

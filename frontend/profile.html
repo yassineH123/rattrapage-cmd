@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mon profil — FreelanceHub</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<nav id="navbar"></nav>
+<main class="page">
+  <div class="container" style="max-width:620px">
+    <h1 class="section-title" style="margin-bottom:28px">Mon profil</h1>
+
+    <!-- Avatar card -->
+    <div class="profile-header">
+      <div class="profile-avatar" id="profileAvatar">?</div>
+      <div>
+        <div style="font-family:Syne,sans-serif;font-size:22px;font-weight:700" id="profileName">...</div>
+        <div style="color:var(--muted);font-size:14px" id="profileEmail">...</div>
+        <span class="badge badge-primary" style="margin-top:8px;display:inline-flex" id="profileRole">...</span>
+      </div>
+    </div>
+
+    <!-- Edit form -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body">
+        <h3 style="font-size:18px;font-family:Syne,sans-serif;font-weight:700;margin-bottom:20px">Modifier mes informations</h3>
+        <div id="alertBox"></div>
+        <div class="form-group">
+          <label class="form-label">Nom complet</label>
+          <input class="input" id="nom" type="text" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bio / Description</label>
+          <textarea class="input" id="bio" rows="4" placeholder="Parlez de vous, de vos compétences..."></textarea>
+        </div>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveProfile()">Sauvegarder</button>
+      </div>
+    </div>
+
+    <!-- Account info -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body">
+        <h3 style="font-size:18px;font-family:Syne,sans-serif;font-weight:700;margin-bottom:16px">Informations du compte</h3>
+        <div id="accountInfo"></div>
+      </div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="card" style="border-color:#fee2e2">
+      <div class="card-body">
+        <h3 style="font-size:18px;font-family:Syne,sans-serif;font-weight:700;color:var(--danger);margin-bottom:8px">Zone de danger</h3>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:16px">Se déconnecter de votre compte.</p>
+        <button class="btn btn-outline" style="color:var(--danger);border-color:var(--danger)" onclick="Auth.logout()">
+          🚪 Se déconnecter
+        </button>
+      </div>
+    </div>
+  </div>
+</main>
+<footer id="footer"></footer>
+
+<script src="js/api.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw '';
+  renderNavbar('profile');
+  renderFooter();
+
+  const roleLabels = { client:'🛒 Client', freelancer:'💼 Freelancer', admin:'⚙️ Admin' };
+
+  (async () => {
+    const user = await api.get('/auth/me');
+    document.getElementById('profileAvatar').textContent = user.nom[0].toUpperCase();
+    document.getElementById('profileName').textContent   = user.nom;
+    document.getElementById('profileEmail').textContent  = user.email;
+    document.getElementById('profileRole').textContent   = roleLabels[user.role];
+    document.getElementById('nom').value = user.nom;
+    document.getElementById('bio').value = user.bio || '';
+
+    document.getElementById('accountInfo').innerHTML = [
+      { label:'Email',         value: user.email },
+      { label:'Rôle',          value: roleLabels[user.role] },
+      { label:'Membre depuis', value: new Date(user.created_at).toLocaleDateString('fr-FR',{year:'numeric',month:'long'}) },
+      { label:'Vérifié',       value: user.is_verified ? '✅ Oui' : '❌ Non' },
+    ].map((r,i,arr) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;${i<arr.length-1?'border-bottom:1px solid var(--border)':''}">
+        <span style="color:var(--muted);font-size:14px">${r.label}</span>
+        <span style="font-weight:500;font-size:14px">${r.value}</span>
+      </div>`).join('');
+  })();
+
+  async function saveProfile() {
+    const nom = document.getElementById('nom').value.trim();
+    const bio = document.getElementById('bio').value.trim();
+    const btn = document.getElementById('saveBtn');
+    const alertBox = document.getElementById('alertBox');
+    alertBox.innerHTML = '';
+    setLoading(btn, true);
+    try {
+      await api.put('/auth/profile', { nom, bio });
+      showAlert(alertBox, 'Profil mis à jour avec succès !', 'success');
+      document.getElementById('profileName').textContent = nom;
+    } catch(err) {
+      showAlert(alertBox, err.message || 'Erreur.');
+    } finally {
+      setLoading(btn, false, 'Sauvegarder');
+    }
+  }
+</script>
+</body>
+</html>

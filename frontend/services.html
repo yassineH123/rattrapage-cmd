@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Services — FreelanceHub</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<nav id="navbar"></nav>
+<main class="page">
+  <div class="container">
+    <h1 class="section-title">Tous les services</h1>
+    <p class="section-sub" style="margin-bottom:24px">Trouvez le freelancer parfait pour votre projet</p>
+
+    <!-- Search -->
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      <input class="input" id="searchInput" placeholder="Rechercher un service..." style="flex:1" />
+      <button class="btn btn-primary" onclick="doSearch()">Rechercher</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-pills" id="filterPills" style="margin-bottom:28px">
+      <span class="pill active" data-cat="" onclick="selectCat('',this)">Tous</span>
+      <span class="pill" data-cat="Design" onclick="selectCat('Design',this)">Design</span>
+      <span class="pill" data-cat="Développement" onclick="selectCat('Développement',this)">Développement</span>
+      <span class="pill" data-cat="Marketing" onclick="selectCat('Marketing',this)">Marketing</span>
+      <span class="pill" data-cat="Rédaction" onclick="selectCat('Rédaction',this)">Rédaction</span>
+      <span class="pill" data-cat="Vidéo" onclick="selectCat('Vidéo',this)">Vidéo</span>
+      <span class="pill" data-cat="Traduction" onclick="selectCat('Traduction',this)">Traduction</span>
+    </div>
+
+    <p id="resultsCount" style="font-size:13px;color:var(--muted);margin-bottom:16px"></p>
+    <div class="grid-3" id="servicesGrid"></div>
+  </div>
+</main>
+<footer id="footer"></footer>
+
+<script src="js/api.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  renderNavbar('services');
+  renderFooter();
+
+  const params = new URLSearchParams(location.search);
+  let currentCat = params.get('cat') || '';
+  let currentSearch = params.get('q') || '';
+
+  document.getElementById('searchInput').value = currentSearch;
+
+  // Highlight active pill
+  if (currentCat) {
+    document.querySelectorAll('.pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.cat === currentCat);
+    });
+  }
+
+  function selectCat(cat, el) {
+    currentCat = cat;
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    loadServices();
+  }
+
+  function doSearch() {
+    currentSearch = document.getElementById('searchInput').value.trim();
+    loadServices();
+  }
+
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+
+  async function loadServices() {
+    const grid = document.getElementById('servicesGrid');
+    grid.innerHTML = Array(6).fill(`
+      <div class="card"><div class="skeleton" style="height:180px"></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <div class="skeleton" style="height:12px;width:60px;border-radius:100px"></div>
+        <div class="skeleton" style="height:16px;width:80%"></div>
+        <div class="skeleton" style="height:16px;width:50%"></div>
+      </div></div>`).join('');
+
+    const q = new URLSearchParams();
+    if (currentCat)    q.set('categorie', currentCat);
+    if (currentSearch) q.set('search', currentSearch);
+    q.set('limit', '24');
+
+    try {
+      const services = await api.get('/services?' + q);
+      document.getElementById('resultsCount').textContent = `${services.length} service(s) trouvé(s)`;
+
+      if (!services.length) {
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--muted)">
+          <div style="font-size:56px;margin-bottom:12px">🔍</div>
+          <h3 style="font-size:20px;margin-bottom:6px">Aucun service trouvé</h3>
+          <p>Essayez d'autres mots-clés ou catégories.</p>
+        </div>`;
+        return;
+      }
+      grid.innerHTML = services.map(s => `
+        <div class="card service-card" onclick="location.href='service-detail.html?id=${s.id}'">
+          <div class="service-card-img">${s.image ? `<img src="http://localhost:5000${s.image}" />` : '🎨'}</div>
+          <div class="service-card-body">
+            ${s.categorie ? `<span class="badge badge-primary">${s.categorie}</span>` : ''}
+            <div class="service-card-title">${s.titre}</div>
+            <div class="service-card-seller">
+              ${avatarHTML(s.freelancer_nom, 26)}
+              <span style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.freelancer_nom}</span>
+            </div>
+            <div class="service-card-footer">
+              <div>${starsHTML(s.note_moyenne)} <span style="font-size:12px;color:var(--muted)">(${s.nb_avis||0})</span></div>
+              <div class="price">${s.prix} DH</div>
+            </div>
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">Erreur de chargement.</div>`;
+    }
+  }
+
+  loadServices();
+</script>
+</body>
+</html>

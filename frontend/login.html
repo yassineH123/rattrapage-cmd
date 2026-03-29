@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connexion — FreelanceHub</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .login-layout { display:grid; grid-template-columns:1fr 1fr; min-height:calc(100vh - 64px); }
+    .login-left { background:var(--dark); display:flex; align-items:center; justify-content:center; padding:40px; position:relative; overflow:hidden; }
+    .login-left::before { content:''; position:absolute; top:10%; left:10%; width:300px; height:300px; background:rgba(232,93,4,.15); border-radius:50%; filter:blur(60px); }
+    .login-left::after  { content:''; position:absolute; bottom:10%; right:10%; width:200px; height:200px; background:rgba(232,93,4,.08); border-radius:50%; filter:blur(40px); }
+    .login-deco { position:relative; z-index:1; text-align:center; color:#fff; }
+    .login-deco h2 { font-size:38px; font-weight:800; line-height:1.2; margin-bottom:14px; }
+    .login-deco h2 span { color:var(--primary); }
+    .login-deco p { color:rgba(255,255,255,.55); font-size:15px; max-width:300px; line-height:1.7; }
+    .login-right { display:flex; align-items:center; justify-content:center; padding:40px; }
+    .login-form-wrap { width:100%; max-width:420px; }
+    @media(max-width:768px){ .login-left{display:none} .login-layout{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+<nav id="navbar"></nav>
+
+<main>
+  <div class="login-layout">
+    <!-- Left deco -->
+    <div class="login-left">
+      <div class="login-deco">
+        <div style="font-size:64px;margin-bottom:20px">🚀</div>
+        <h2>Bienvenue sur<br><span>FreelanceHub</span></h2>
+        <p>La plateforme qui connecte les meilleurs freelancers du Maroc avec des clients ambitieux.</p>
+      </div>
+    </div>
+
+    <!-- Right form -->
+    <div class="login-right">
+      <div class="login-form-wrap" style="animation:fadeUp .35s ease">
+        <h1 style="font-size:30px;margin-bottom:6px">Se connecter</h1>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:28px">
+          Pas encore de compte ?
+          <a href="register.html" style="color:var(--primary);font-weight:600">S'inscrire</a>
+        </p>
+
+        <div id="alertBox"></div>
+
+        <div class="form-group">
+          <label class="form-label">Adresse email</label>
+          <input class="input" id="email" type="email" placeholder="vous@exemple.com" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mot de passe</label>
+          <div class="input-group">
+            <input class="input" id="password" type="password" placeholder="••••••••" />
+            <button class="input-eye" type="button" id="eyeBtn">👁️</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full btn-lg" id="loginBtn" onclick="doLogin()">
+          Se connecter →
+        </button>
+
+        <!-- Demo -->
+        <div style="margin-top:24px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+          <p style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Compte de démo</p>
+          <p style="font-size:12px;color:var(--muted);font-family:monospace">admin@freelancehub.ma / Admin@123</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  renderNavbar();
+
+  // Eye toggle
+  const eyeBtn = document.getElementById('eyeBtn');
+  const pwdInput = document.getElementById('password');
+  eyeBtn.addEventListener('click', () => {
+    const show = pwdInput.type === 'password';
+    pwdInput.type = show ? 'text' : 'password';
+    eyeBtn.textContent = show ? '🙈' : '👁️';
+  });
+
+  // Enter key
+  document.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+  async function doLogin() {
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn      = document.getElementById('loginBtn');
+    const alertBox = document.getElementById('alertBox');
+    alertBox.innerHTML = '';
+
+    if (!email || !password) return showAlert(alertBox, 'Email et mot de passe requis.');
+
+    setLoading(btn, true);
+    try {
+      const data = await api.post('/auth/login', { email, password });
+      Auth.setSession(data.token, data.user);
+      location.href = data.user.role === 'freelancer' ? 'dashboard.html' : 'services.html';
+    } catch(err) {
+      if (err.needsVerification) {
+        location.href = `verify.html?userId=${err.userId}`;
+      } else {
+        showAlert(alertBox, err.message || 'Erreur de connexion.');
+      }
+      setLoading(btn, false, 'Se connecter →');
+    }
+  }
+</script>
+</body>
+</html>

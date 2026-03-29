@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Service — FreelanceHub</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<nav id="navbar"></nav>
+<main class="page">
+  <div class="container">
+    <div id="content"></div>
+  </div>
+</main>
+<footer id="footer"></footer>
+
+<script src="js/api.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  renderNavbar('services');
+  renderFooter();
+
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id) location.href = 'services.html';
+
+  (async () => {
+    try {
+      const [service, reviews] = await Promise.all([
+        api.get(`/services/${id}`),
+        api.get(`/reviews/service/${id}`)
+      ]);
+      document.title = `${service.titre} — FreelanceHub`;
+      render(service, reviews);
+    } catch {
+      document.getElementById('content').innerHTML = `
+        <div style="text-align:center;padding:80px 0">
+          <div style="font-size:56px;margin-bottom:16px">😕</div>
+          <h2 style="margin-bottom:12px">Service introuvable</h2>
+          <a href="services.html" class="btn btn-primary">Retour aux services</a>
+        </div>`;
+    }
+  })();
+
+  function render(s, reviews) {
+    const user = Auth.getUser();
+    const avgNote = parseFloat(s.note_moyenne) || 0;
+
+    const orderBtn = user?.role === 'client'
+      ? `<button class="btn btn-primary btn-full btn-lg" id="orderBtn" onclick="doOrder(${s.id})">Commander maintenant</button>`
+      : !user
+      ? `<a href="login.html" class="btn btn-primary btn-full btn-lg">Se connecter pour commander</a>`
+      : '';
+
+    const contactBtn = user && String(user.id) !== String(s.user_id)
+      ? `<a href="messages.html" class="btn btn-outline btn-full" style="margin-top:10px">Contacter le freelancer</a>`
+      : '';
+
+    const reviewsHTML = reviews.length ? reviews.map(r => `
+      <div style="padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          ${avatarHTML(r.nom, 28)}
+          <span style="font-weight:500;font-size:14px">${r.nom}</span>
+          ${starsHTML(r.note)}
+        </div>
+        ${r.commentaire ? `<p style="font-size:13px;color:var(--muted);margin-left:36px">${r.commentaire}</p>` : ''}
+      </div>`).join('') : `<p style="color:var(--muted);font-size:14px">Aucun avis pour l'instant.</p>`;
+
+    document.getElementById('content').innerHTML = `
+      <div class="detail-layout">
+        <!-- Main -->
+        <div>
+          ${s.categorie ? `<span class="badge badge-primary" style="margin-bottom:12px;display:inline-flex">${s.categorie}</span>` : ''}
+          <h1 style="font-size:28px;line-height:1.3;margin-bottom:16px">${s.titre}</h1>
+
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+            ${avatarHTML(s.freelancer_nom, 40)}
+            <div>
+              <div style="font-weight:600;font-size:15px">${s.freelancer_nom}</div>
+              <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)">
+                ${starsHTML(avgNote)} (${s.nb_avis||0} avis)
+              </div>
+            </div>
+          </div>
+
+          <!-- Image -->
+          <div style="height:280px;border-radius:var(--radius-lg);overflow:hidden;background:#f5f4f1;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:72px;color:rgba(0,0,0,.1);margin-bottom:24px">
+            ${s.image ? `<img src="http://localhost:5000${s.image}" style="width:100%;height:100%;object-fit:cover" />` : '🎨'}
+          </div>
+
+          <!-- Description -->
+          <div class="card" style="margin-bottom:20px">
+            <div class="card-body">
+              <h2 style="font-size:18px;margin-bottom:12px">À propos de ce service</h2>
+              <p style="line-height:1.8;color:rgba(26,26,46,.8);white-space:pre-line">${s.description}</p>
+            </div>
+          </div>
+
+          ${s.freelancer_bio ? `
+            <div class="card" style="margin-bottom:20px">
+              <div class="card-body">
+                <h2 style="font-size:18px;margin-bottom:10px">À propos du freelancer</h2>
+                <p style="font-size:14px;color:var(--muted);line-height:1.8">${s.freelancer_bio}</p>
+              </div>
+            </div>` : ''}
+
+          <!-- Reviews -->
+          <div class="card">
+            <div class="card-body">
+              <h2 style="font-size:18px;margin-bottom:16px">Avis clients (${reviews.length})</h2>
+              ${reviewsHTML}
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sticky-sidebar">
+          <div class="card">
+            <div class="card-body">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+                <span class="price" style="font-size:32px">${s.prix} DH</span>
+                <span style="font-size:13px;color:var(--muted)">/ service</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:20px">
+                ⏱️ Livraison en ${s.delai||3} jour(s)
+              </div>
+
+              <div id="orderMsg"></div>
+              ${orderBtn}
+              ${contactBtn}
+
+              <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--muted)">
+                <div>✅ Paiement sécurisé</div>
+                <div>🔄 Révisions incluses</div>
+                <div>💬 Support 24/7</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  async function doOrder(serviceId) {
+    const btn = document.getElementById('orderBtn');
+    const msgEl = document.getElementById('orderMsg');
+    setLoading(btn, true);
+    try {
+      await api.post('/orders', { service_id: serviceId });
+      msgEl.innerHTML = `<div class="alert alert-success">✅ Commande passée ! Consultez votre dashboard.</div>`;
+    } catch(err) {
+      msgEl.innerHTML = `<div class="alert alert-danger">⚠️ ${err.message || 'Erreur.'}</div>`;
+    } finally {
+      setLoading(btn, false, 'Commander maintenant');
+    }
+  }
+</script>
+</body>
+</html>
