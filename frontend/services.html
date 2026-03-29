@@ -100,7 +100,7 @@
       }
       grid.innerHTML = services.map(s => `
         <div class="card service-card" onclick="location.href='service-detail.html?id=${s.id}'">
-          <div class="service-card-img">${s.image ? `<img src="http://localhost:5000${s.image}" />` : '🎨'}</div>
+          <div class="service-card-img">${s.image ? `<img src="${BASE_URL}${s.image}" />` : '🎨'}</div>
           <div class="service-card-body">
             ${s.categorie ? `<span class="badge badge-primary">${s.categorie}</span>` : ''}
             <div class="service-card-title">${s.titre}</div>
@@ -115,7 +115,8 @@
           </div>
         </div>`).join('');
     } catch(e) {
-      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">Erreur de chargement.</div>`;
+      console.error('Erreur services:', e);
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">Erreur de chargement. ${e.message}</div>`;
     }
   }
 

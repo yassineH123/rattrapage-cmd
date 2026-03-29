@@ -45,7 +45,7 @@
   const me = Auth.getUser();
   let activeConv = null;
   let onlineIds  = [];
-  const socket   = io('http://localhost:5000');
+  const socket   = io(BASE_URL || '/');
 
   socket.emit('user_connected', me.id);
   socket.on('online_users', ids => { onlineIds = ids.map(String); });

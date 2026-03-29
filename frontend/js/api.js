@@ -1,4 +1,6 @@
-const API = 'http://localhost:5000/api';
+const isLocalDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.includes('192.168');
+const API = isLocalDev ? 'http://localhost:5000/api' : '/api';
+const BASE_URL = isLocalDev ? 'http://localhost:5000' : '';
 
 // ── HTTP helpers ──────────────────────────────
 async function request(method, endpoint, body = null, isForm = false) {
@@ -10,18 +12,30 @@ async function request(method, endpoint, body = null, isForm = false) {
   const opts = { method, headers };
   if (body) opts.body = isForm ? body : JSON.stringify(body);
 
-  const res = await fetch(API + endpoint, opts);
+  const url = API + endpoint;
+  console.log(`📤 ${method} ${url}`, body || '');
 
-  if (res.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login.html';
-    return;
+  try {
+    const res = await fetch(url, opts);
+
+    if (res.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login.html';
+      return;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.error(`❌ ${method} ${url}:`, res.status, data);
+      throw data;
+    }
+    console.log(`✅ ${method} ${url}:`, data);
+    return data;
+  } catch (err) {
+    console.error(`🔥 Fetch error on ${url}:`, err);
+    throw err;
   }
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw data;
-  return data;
 }
 
 const api = {

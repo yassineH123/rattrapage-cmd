@@ -124,7 +124,7 @@
 
   function serviceCardHTML(s) {
     const img = s.image
-      ? `<img src="http://localhost:5000${s.image}" alt="${s.titre}" />`
+      ? `<img src="${BASE_URL}${s.image}" alt="${s.titre}" />`
       : '🎨';
     return `
       <div class="card service-card" onclick="location.href='service-detail.html?id=${s.id}'">

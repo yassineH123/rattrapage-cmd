@@ -174,8 +174,8 @@ router.put('/profile', auth, async (req, res) => {
   res.json({ message: 'Profil mis à jour.' });
 });
 
-// ── ADMIN ROUTES ──────────────────────────────
-// GET /api/auth/admin/users
+// ── ADMIN ROUTES (kept for backwards compatibility) ──
+// These endpoints are also available in /api/admin but kept here for existing frontend code
 router.get('/admin/users', auth, adminOnly, async (req, res) => {
   const [users] = await db.query(
     'SELECT id, nom, email, role, is_verified, created_at FROM users ORDER BY created_at DESC'
@@ -183,7 +183,6 @@ router.get('/admin/users', auth, adminOnly, async (req, res) => {
   res.json(users);
 });
 
-// DELETE /api/auth/admin/users/:id
 router.delete('/admin/users/:id', auth, adminOnly, async (req, res) => {
   const { id } = req.params;
   if (String(id) === String(req.user.id))
@@ -192,7 +191,6 @@ router.delete('/admin/users/:id', auth, adminOnly, async (req, res) => {
   res.json({ message: 'Utilisateur supprimé.' });
 });
 
-// PUT /api/auth/admin/users/:id/verify
 router.put('/admin/users/:id/verify', auth, adminOnly, async (req, res) => {
   await db.query('UPDATE users SET is_verified = TRUE WHERE id = ?', [req.params.id]);
   res.json({ message: 'Utilisateur vérifié.' });

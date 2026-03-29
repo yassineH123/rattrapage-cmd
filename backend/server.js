@@ -94,3 +94,13 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`📦 Database : ${process.env.DB_NAME}`);
   console.log(`🔐 Auth     : JWT enabled\n`);
 });
+
+// Catch unhandled errors
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
