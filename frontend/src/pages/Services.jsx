@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import api, { BASE_URL } from '../utils/api'
 import { SkeletonCard } from '../components/Loading'
 import { formatDate, starsHTML } from '../utils/helpers'
@@ -7,6 +7,7 @@ import { CATEGORIES } from '../utils/constants'
 
 export default function Services() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
