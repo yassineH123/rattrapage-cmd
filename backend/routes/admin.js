@@ -22,7 +22,10 @@ router.get('/users', async (req, res) => {
 router.get('/services', async (req, res) => {
   try {
     const [services] = await db.query(
-      'SELECT id, user_id, titre, description, prix, categorie, delai, created_at FROM services'
+      `SELECT s.id, s.user_id, s.titre, s.description, s.prix, s.categorie, s.delai, s.created_at, 
+              u.nom as freelancer_nom
+       FROM services s
+       LEFT JOIN users u ON s.user_id = u.id`
     );
     res.json({ services, count: services.length });
   } catch(err) {
@@ -179,18 +182,16 @@ router.put('/services/:id', async (req, res) => {
 // ── GET dashboard stats ───────────────────────
 router.get('/stats', async (req, res) => {
   try {
-    const [users] = await db.query('SELECT COUNT(*) as count FROM users');
-    const [services] = await db.query('SELECT COUNT(*) as count FROM services');
-    const [orders] = await db.query('SELECT COUNT(*) as count FROM orders');
-    const [messages] = await db.query('SELECT COUNT(*) as count FROM messages');
-    const [reviews] = await db.query('SELECT COUNT(*) as count FROM reviews');
+    const [usersCount] = await db.query('SELECT COUNT(*) as count FROM users');
+    const [servicesCount] = await db.query('SELECT COUNT(*) as count FROM services');
+    const [ordersCount] = await db.query('SELECT COUNT(*) as count FROM orders');
+    const [revenue] = await db.query('SELECT SUM(montant) as total FROM orders WHERE statut = "completed"');
     
     res.json({
-      users: users[0].count,
-      services: services[0].count,
-      orders: orders[0].count,
-      messages: messages[0].count,
-      reviews: reviews[0].count
+      users: usersCount[0].count,
+      services: servicesCount[0].count,
+      orders: ordersCount[0].count,
+      revenue: revenue[0].total || 0
     });
   } catch(err) {
     res.status(500).json({ message: 'Erreur serveur', error: err.message });

@@ -36,9 +36,11 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ── Routes ────────────────────────────────────
 app.use('/api/auth',     require('./routes/auth'));
+app.use('/api/users',    require('./routes/users'));
 app.use('/api/services', require('./routes/services'));
 app.use('/api/orders',   require('./routes/orders'));
 app.use('/api/reviews',  require('./routes/reviews'));

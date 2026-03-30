@@ -196,4 +196,89 @@ router.put('/admin/users/:id/verify', auth, adminOnly, async (req, res) => {
   res.json({ message: 'Utilisateur vérifié.' });
 });
 
+// ── PASSWORD RESET ROUTES ──
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email)
+      return res.status(400).json({ message: 'Email requis.' });
+
+    const cleanEmail = email.trim().toLowerCase();
+    const [users] = await db.query('SELECT id, nom FROM users WHERE email = ?', [cleanEmail]);
+    
+    if (!users.length)
+      return res.status(400).json({ message: 'Cet email n\'existe pas dans notre base de données.' });
+
+    const user = users[0];
+    const code = generateCode();
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Insert reset code with email method
+    await db.query(
+      'INSERT INTO verification_codes (user_id, code, method, expires_at) VALUES (?, ?, ?, ?)',
+      [user.id, code, 'email', expires]
+    );
+
+    // Send email
+    try {
+      await sendEmailCode(cleanEmail, code, user.nom);
+      console.log(`📧 Code de réinitialisation envoyé à ${cleanEmail}`);
+    } catch (sendErr) {
+      console.error('Erreur envoi:', sendErr.message);
+      return res.status(500).json({ message: `Impossible d'envoyer le code : ${sendErr.message}` });
+    }
+
+    res.json({ message: 'Code de réinitialisation envoyé par email.' });
+  } catch (err) {
+    console.error('ERREUR FORGOT PASSWORD:', err.message);
+    res.status(500).json({ message: 'Erreur serveur.', error: err.message });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword)
+      return res.status(400).json({ message: 'Email, code et mot de passe requis.' });
+
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères.' });
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Get user
+    const [users] = await db.query('SELECT id FROM users WHERE email = ?', [cleanEmail]);
+    if (!users.length)
+      return res.status(400).json({ message: 'Utilisateur non trouvé.' });
+
+    const userId = users[0].id;
+
+    // Verify reset code
+    const [codes] = await db.query(
+      `SELECT * FROM verification_codes
+       WHERE user_id = ? AND code = ? AND method = 'email' AND used = FALSE AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId, code]
+    );
+
+    if (!codes.length)
+      return res.status(400).json({ message: 'Code de réinitialisation invalide ou expiré.' });
+
+    // Hash new password and update
+    const hash = await bcrypt.hash(newPassword, 12);
+    await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hash, userId]);
+
+    // Mark code as used
+    await db.query('UPDATE verification_codes SET used = TRUE WHERE id = ?', [codes[0].id]);
+
+    res.json({ message: 'Mot de passe réinitialisé avec succès !' });
+  } catch (err) {
+    console.error('ERREUR RESET PASSWORD:', err.message);
+    res.status(500).json({ message: 'Erreur serveur.', error: err.message });
+  }
+});
+
 module.exports = router;
